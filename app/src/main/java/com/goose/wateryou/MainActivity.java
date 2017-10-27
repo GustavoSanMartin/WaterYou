@@ -3,12 +3,12 @@ package com.goose.wateryou;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ToggleButton;
 
 public class MainActivity extends Activity {
-    Button waterButton = null;
-    Button lampButton = null;
-    Button autoButton = null;
+    ToggleButton waterButton = null;
+    ToggleButton lampButton = null;
+    ToggleButton autoButton = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,5 +42,25 @@ public class MainActivity extends Activity {
             waterButton.setEnabled(false);
             lampButton.setEnabled(false);
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
     }
 }
