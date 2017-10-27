@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.goose.wateryou.MainActivity">
+
+    <TextView
+        android:id="@+id/AutoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/auto"
+        tools:layout_editor_absoluteX="151dp"
+        tools:layout_editor_absoluteY="16dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="parent"
+        android:layout_marginTop="20dp" />
+
+    <ToggleButton
+        android:id="@+id/AutoToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onAuto"
+        android:textOff="@string/off"
+        android:textOn="@string/on"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/AutoText" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/water_valve"
+        android:id="@+id/WaterText"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginStart="50dp"
+        app:layout_constraintRight_toLeftOf="@id/AutoToggle"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ToggleButton
+        android:id="@+id/WaterToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:onClick="onWater"
+        android:textOff="@string/closed"
+        android:textOn="@string/open"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginStart="50dp"
+        app:layout_constraintRight_toLeftOf="@id/AutoToggle"
+        app:layout_constraintTop_toBottomOf="@+id/WaterText" />
+
+    <TextView
+        android:id="@+id/LampText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/lamp"
+        tools:layout_editor_absoluteX="252dp"
+        tools:layout_editor_absoluteY="246dp"
+        app:layout_constraintLeft_toRightOf="@id/AutoToggle"
+        app:layout_constraintRight_toRightOf="parent"
+        android:layout_marginEnd="50dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <ToggleButton
+        android:id="@+id/LampToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:onClick="onLamp"
+        android:textOff="@string/dim"
+        android:textOn="@string/bright"
+        app:layout_constraintLeft_toRightOf="@id/AutoToggle"
+        app:layout_constraintRight_toRightOf="parent"
+        android:layout_marginEnd="50dp"
+        app:layout_constraintTop_toBottomOf="@+id/LampText" />
+
+</android.support.constraint.ConstraintLayout>

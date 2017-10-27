@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">WaterYou</string>
+    <string name="water_valve">Water Valve</string>
+    <string name="auto">Auto</string>
+    <string name="lamp">Lamp</string>
+    <string name="dim">Dim</string>
+    <string name="bright">Bright</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="closed">closed</string>
+    <string name="open">open</string>
+</resources>
