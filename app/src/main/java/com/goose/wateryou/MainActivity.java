@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.Button;
 
 public class MainActivity extends Activity {
-
     Button waterButton = null;
     Button lampButton = null;
     Button autoButton = null;
@@ -22,22 +21,26 @@ public class MainActivity extends Activity {
 
     }
 
+    //when the "Water Valve" toggle is pressed
     public void onWater(View view) {
 
     }
 
+    //when the "Lamp" button is pressed
     public void onLamp(View view) {
 
     }
 
+    //when the "Auto" toggle is pressed
     public void onAuto(View view) {
+        //if the toggle is set to "off" enable the manual toggles (ie. Water Valve & Lamp)
         if (autoButton.getText().equals(getString(R.string.off))) {
-            waterButton.setClickable(true);
-            lampButton.setClickable(true);
+            waterButton.setEnabled(true);
+            lampButton.setEnabled(true);
         }
-        else if (autoButton.getText().equals(getString(R.string.on))){
-            waterButton.setClickable(false);
-            lampButton.setClickable(false);
+        else {
+            waterButton.setEnabled(false);
+            lampButton.setEnabled(false);
         }
     }
 }
