@@ -27,8 +27,6 @@ public class MainActivity extends Activity {
         waterButton = findViewById(R.id.WaterToggle);
         lampButton  = findViewById(R.id.LampToggle);
         autoButton  = findViewById(R.id.AutoToggle);
-
-
     }
 
     //when the "Water Valve" toggle is pressed
