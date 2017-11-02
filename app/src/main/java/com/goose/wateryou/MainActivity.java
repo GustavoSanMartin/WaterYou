@@ -58,6 +58,12 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
     private ToggleButton lampButton = null;
     private ToggleButton autoButton = null;
 
+    private boolean requestedWater = false;
+    private boolean requestedLamp = false;
+    private boolean actualWater = false;
+    private boolean actualLamp = false;
+    private boolean auto = false;
+
     /**
      * Create the main activity.
      * @param savedInstanceState previously saved instance data.
@@ -351,60 +357,32 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
             List<List<Object>> values = response.getValues();
             if (values != null) {
                 for (List row : values) {
-                    final Handler waterHandler = new Handler(Looper.getMainLooper());
-
-                    Runnable waterRunnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            if (waterButton.isChecked()){
-                                waterButton.setChecked(false);
-                            }
-                            else {
-                                waterButton.setChecked(true);
-                            }
-                        }
-                    };
-
-                    if (row.get(2).toString().equals("0")&& waterButton.isChecked() || row.get(2).toString().equals("1") && !waterButton.isChecked()){
-                        waterHandler.post(waterRunnable);
-                    }
-
-                    // Get a handler that can be used to post to the main thread
-                    Handler lampHandler = new Handler(Looper.getMainLooper());
-
-                    Runnable lampRunnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            if (lampButton.isChecked()){
-                                lampButton.setChecked(false);
-                            }
-                            else {
-                                lampButton.setChecked(true);
-                            }                        }
-                    };
-                    if (row.get(3).toString().equals("0") && lampButton.isChecked() || row.get(3).toString().equals("1") && !lampButton.isChecked()) {
-                        lampHandler.post(lampRunnable);
-                    }
-
-                    // Get a handler that can be used to post to the main thread
-                    final Handler autoHandler = new Handler(Looper.getMainLooper());
+                    final Handler myHandler = new Handler(Looper.getMainLooper());
 
                     Runnable myRunnable = new Runnable() {
                         @Override
                         public void run() {
-                            if (autoButton.isChecked()){
-                                autoButton.setChecked(false);
+                            if (auto){
+                                waterButton.setEnabled(false);
+                                lampButton.setEnabled(false);
                             }
                             else {
-                                autoButton.setChecked(true);
+                                waterButton.setEnabled(true);
+                                lampButton.setEnabled(true);
                             }
-                            switchAuto();
+
+                            autoButton.setChecked(auto);
+                            autoButton.setEnabled(true);
+                            lampButton.setChecked(actualLamp);
+                            waterButton.setChecked(actualWater);
                         }
                     };
 
-                    if (row.get(4).toString().equals("0") && autoButton.isChecked() || row.get(4).toString().equals("1") && !autoButton.isChecked()){
-                        autoHandler.post(myRunnable);
-                    }
+                    actualWater = row.get(2).toString().equals("1"); //if row = 1, actualWater = true
+                    actualLamp = row.get(3).toString().equals("1"); //if row = 1, actualLamp = true
+                    auto = row.get(4).toString().equals("1");       //if row = 1, auto = true
+
+                    myHandler.post(myRunnable);
                 }
             }
             return results;
