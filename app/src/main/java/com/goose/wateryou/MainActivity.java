@@ -28,6 +28,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.View;
@@ -49,7 +51,6 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
     static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
 
-    private static final String BUTTON_TEXT = "Call Google Sheets API";
     private static final String PREF_ACCOUNT_NAME = "accountName";
     private static final String[] SCOPES = { SheetsScopes.SPREADSHEETS_READONLY };
 
@@ -68,11 +69,15 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         mCredential = GoogleAccountCredential.usingOAuth2(
                 getApplicationContext(), Arrays.asList(SCOPES))
                 .setBackOff(new ExponentialBackOff());
-        getResultsFromApi();
+
 
         waterButton = findViewById(R.id.WaterToggle);
         lampButton  = findViewById(R.id.LampToggle);
         autoButton  = findViewById(R.id.AutoToggle);
+
+
+        getResultsFromApi();
+
     }
 
     //when the "Water Valve" toggle is pressed
@@ -85,9 +90,12 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
 
     //when the "Auto" toggle is pressed
     public void onAuto(View view) {
-        getResultsFromApi();
+        switchAuto();
+    }
+
+    private void switchAuto(){
         //if the toggle is set to "off" enable the manual toggles (ie. Water Valve & Lamp)
-        if (autoButton.getText().equals(getString(R.string.off))) {
+        if (!autoButton.isChecked()) {
             waterButton.setEnabled(true);
             lampButton.setEnabled(true);
         }
@@ -342,10 +350,61 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
                     .execute();
             List<List<Object>> values = response.getValues();
             if (values != null) {
-                results.add("Req H2O, Req Lamp, Act H20, Act Lamp, Auto");
                 for (List row : values) {
-                    results.add(row.get(0) + ", " + row.get(1) + ", " + row.get(2) +
-                            ", " + row.get(3) + ", " + row.get(4));
+                    final Handler waterHandler = new Handler(Looper.getMainLooper());
+
+                    Runnable waterRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (waterButton.isChecked()){
+                                waterButton.setChecked(false);
+                            }
+                            else {
+                                waterButton.setChecked(true);
+                            }
+                        }
+                    };
+
+                    if (row.get(2).toString().equals("0")&& waterButton.isChecked() || row.get(2).toString().equals("1") && !waterButton.isChecked()){
+                        waterHandler.post(waterRunnable);
+                    }
+
+                    // Get a handler that can be used to post to the main thread
+                    Handler lampHandler = new Handler(Looper.getMainLooper());
+
+                    Runnable lampRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (lampButton.isChecked()){
+                                lampButton.setChecked(false);
+                            }
+                            else {
+                                lampButton.setChecked(true);
+                            }                        }
+                    };
+                    if (row.get(3).toString().equals("0") && lampButton.isChecked() || row.get(3).toString().equals("1") && !lampButton.isChecked()) {
+                        lampHandler.post(lampRunnable);
+                    }
+
+                    // Get a handler that can be used to post to the main thread
+                    final Handler autoHandler = new Handler(Looper.getMainLooper());
+
+                    Runnable myRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (autoButton.isChecked()){
+                                autoButton.setChecked(false);
+                            }
+                            else {
+                                autoButton.setChecked(true);
+                            }
+                            switchAuto();
+                        }
+                    };
+
+                    if (row.get(4).toString().equals("0") && autoButton.isChecked() || row.get(4).toString().equals("1") && !autoButton.isChecked()){
+                        autoHandler.post(myRunnable);
+                    }
                 }
             }
             return results;
@@ -363,7 +422,7 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         protected void onPostExecute(List<String> output) {
             //mProgress.hide();
             if (output == null || output.size() == 0) {
-                //mOutputText.setText("No results returned.");
+                Log.d("debug","No results returned.");
             } else {
                 //mOutputText.setText(TextUtils.join("\n", output));
             }
@@ -382,10 +441,10 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
                             ((UserRecoverableAuthIOException) mLastError).getIntent(),
                             MainActivity.REQUEST_AUTHORIZATION);
                 } else {
-                    //mOutputText.setText("The following error occurred:\n" + mLastError.getMessage());
+                    Log.d("error", "The following error occurred:\n" + mLastError.getMessage());
                 }
             } else {
-                //mOutputText.setText("Request cancelled.");
+                Log.d("debug", "Request cancelled.");
             }
         }
     }
