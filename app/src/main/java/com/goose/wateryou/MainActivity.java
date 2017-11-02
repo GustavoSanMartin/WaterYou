@@ -20,7 +20,6 @@ import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -33,6 +32,7 @@ import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import java.io.IOException;
@@ -58,8 +58,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
     private ToggleButton lampButton = null;
     private ToggleButton autoButton = null;
 
-    private boolean requestedWater = false;
-    private boolean requestedLamp = false;
+    //private boolean requestedWater = false;
+    //private boolean requestedLamp = false;
     private boolean actualWater = false;
     private boolean actualLamp = false;
     private boolean auto = false;
@@ -184,9 +184,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         switch(requestCode) {
             case REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
-                    //mOutputText.setText(
-                    //        "This app requires Google Play Services. Please install " +
-                    //                "Google Play Services on your device and relaunch this app.");
+                    Toast.makeText(this, "This app requires Google Play Services. " +
+                            "Please install Google Play Services on your device and relaunch this app.", Toast.LENGTH_LONG).show();
                 } else {
                     getResultsFromApi();
                 }
@@ -263,6 +262,7 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
     private boolean isDeviceOnline() {
         ConnectivityManager connMgr =
                 (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        assert connMgr != null;
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         return (networkInfo != null && networkInfo.isConnected());
     }
@@ -345,12 +345,12 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
          * Fetch a list of names and majors of students in a sample spreadsheet:
          * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
          * @return List of names and majors
-         * @throws IOException
+         * @throws IOException could throw ioException
          */
         private List<String> getDataFromApi() throws IOException {
             String spreadsheetId = "1H062SSqLF8JN7vaRyhBx_h7om0sxhKRB9g6aEHo5Pyw";
             String range = "Data!B2:F";
-            List<String> results = new ArrayList<String>();
+            List<String> results = new ArrayList<>();
             ValueRange response = this.mService.spreadsheets().values()
                     .get(spreadsheetId, range)
                     .execute();
@@ -400,9 +400,7 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         protected void onPostExecute(List<String> output) {
             //mProgress.hide();
             if (output == null || output.size() == 0) {
-                Log.d("debug","No results returned.");
-            } else {
-                //mOutputText.setText(TextUtils.join("\n", output));
+                Log.d("debug", "No results returned.");
             }
         }
 
