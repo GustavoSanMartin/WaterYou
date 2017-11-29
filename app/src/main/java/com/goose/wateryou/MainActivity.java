@@ -56,6 +56,15 @@ public class MainActivity extends Activity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 Timer = timerText.getText().toString();
+
+                if (Objects.equals(Timer, "0")) {
+                    waterButton.setEnabled(true);
+                    lampButton.setEnabled(true);
+                }
+                else {
+                    waterButton.setEnabled(false);
+                    lampButton.setEnabled(false);
+                }
                 new upload().execute();
             }
         });
@@ -83,27 +92,13 @@ public class MainActivity extends Activity {
         new upload().execute();
     }
 
-
-
-    //when the "Auto" toggle is pressed
-
-    /*private void switchAuto(){
-        //if the toggle is set to "off" enable the manual toggles (ie. Water Valve & Lamp)
-        if (!autoButton.isChecked()) {
-            waterButton.setEnabled(true);
-            lampButton.setEnabled(true);
-        }
-        else {
-            waterButton.setEnabled(false);
-            lampButton.setEnabled(false);
-        }
-    }*/
-
     public void setWater(final String newVal){
         final Handler myHandler = new Handler(Looper.getMainLooper());
         final Runnable myRunnable = new Runnable() {
             @Override
             public void run() {
+                waterButton.setEnabled(true);
+
                 Log.d("Water newVal", newVal);
                 if (Objects.equals(newVal, "1")){
                     waterButton.setChecked(true);
@@ -124,6 +119,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 Log.d("Lamp newVal", newVal);
+                lampButton.setEnabled(true);
 
                 if (Objects.equals(newVal, "1")){
                     lampButton.setChecked(true);
@@ -144,8 +140,11 @@ public class MainActivity extends Activity {
         Runnable myRunnable = new Runnable() {
             @Override
             public void run() {
+                timerText.setEnabled(true);
+
                 Log.d("Timer newVal", newVal);
                 Timer = newVal;
+                timerText.setText(newVal);
             }
         };
         myHandler.post(myRunnable);
