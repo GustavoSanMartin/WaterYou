@@ -1,68 +1,35 @@
 package com.goose.wateryou;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.api.client.extensions.android.http.AndroidHttp;
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
-import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
-
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.ExponentialBackOff;
-
-import com.google.api.services.sheets.v4.SheetsScopes;
-
-import com.google.api.services.sheets.v4.model.*;
-
-import android.Manifest;
-import android.accounts.AccountManager;
 import android.app.Activity;
-import android.app.Dialog;
-import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
+import android.widget.EditText;
 import android.widget.ToggleButton;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Objects;
 
-import pub.devrel.easypermissions.AfterPermissionGranted;
-import pub.devrel.easypermissions.EasyPermissions;
 
-public class MainActivity extends Activity implements EasyPermissions.PermissionCallbacks {
-    GoogleAccountCredential mCredential;
-
-    static final int REQUEST_ACCOUNT_PICKER = 1000;
-    static final int REQUEST_AUTHORIZATION = 1001;
-    static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
-    static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
-
-    private static final String PREF_ACCOUNT_NAME = "accountName";
-    private static final String[] SCOPES = { SheetsScopes.SPREADSHEETS_READONLY };
-
+public class MainActivity extends Activity {
     private ToggleButton waterButton = null;
     private ToggleButton lampButton = null;
-    private ToggleButton autoButton = null;
+    private EditText timerText = null;
 
-    //private boolean requestedWater = false;
-    //private boolean requestedLamp = false;
-    private boolean actualWater = false;
-    private boolean actualLamp = false;
-    private boolean auto = false;
+    private String Water = "0";
+    private String Lamp = "0";
+    private String Timer = "0";
+    private boolean read = true;
 
     /**
      * Create the main activity.
@@ -72,34 +39,55 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mCredential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(SCOPES))
-                .setBackOff(new ExponentialBackOff());
-
 
         waterButton = findViewById(R.id.WaterToggle);
         lampButton  = findViewById(R.id.LampToggle);
-        autoButton  = findViewById(R.id.AutoToggle);
+        timerText = findViewById(R.id.TimerText);
 
+        timerText.addTextChangedListener(new TextWatcher() {
 
-        getResultsFromApi();
+            @Override
+            public void afterTextChanged(Editable s) {}
 
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                Timer = timerText.getText().toString();
+                new upload().execute();
+            }
+        });
+
+        new upload().execute();
     }
 
     //when the "Water Valve" toggle is pressed
     public void onWater(View view) {
+        if (waterButton.isChecked())
+            Water = "1";
+        else
+            Water = "0";
+
+        new upload().execute();
     }
 
     //when the "Lamp" button is pressed
     public void onLamp(View view) {
+        if (lampButton.isChecked())
+            Lamp = "1";
+        else
+            Lamp = "0";
+
+        new upload().execute();
     }
+
+
 
     //when the "Auto" toggle is pressed
-    public void onAuto(View view) {
-        switchAuto();
-    }
 
-    private void switchAuto(){
+    /*private void switchAuto(){
         //if the toggle is set to "off" enable the manual toggles (ie. Water Valve & Lamp)
         if (!autoButton.isChecked()) {
             waterButton.setEnabled(true);
@@ -109,318 +97,113 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
             waterButton.setEnabled(false);
             lampButton.setEnabled(false);
         }
-    }
+    }*/
 
-    /**
-     * Attempt to call the API, after verifying that all the preconditions are
-     * satisfied. The preconditions are: Google Play Services installed, an
-     * account was selected and the device currently has online access. If any
-     * of the preconditions are not satisfied, the app will prompt the user as
-     * appropriate.
-     */
-    private void getResultsFromApi() {
-        if (! isGooglePlayServicesAvailable()) {
-            acquireGooglePlayServices();
-        }
-        else if (mCredential.getSelectedAccountName() == null) {
-            chooseAccount();
-        }
-        else if (! isDeviceOnline()) {
-            Log.d("debug","No network connection available.");
-        }
-        else {
-            new MakeRequestTask(mCredential).execute();
-        }
-    }
-
-    /**
-     * Attempts to set the account used with the API credentials. If an account
-     * name was previously saved it will use that one; otherwise an account
-     * picker dialog will be shown to the user. Note that the setting the
-     * account to use with the credentials object requires the app to have the
-     * GET_ACCOUNTS permission, which is requested here if it is not already
-     * present. The AfterPermissionGranted annotation indicates that this
-     * function will be rerun automatically whenever the GET_ACCOUNTS permission
-     * is granted.
-     */
-    @AfterPermissionGranted(REQUEST_PERMISSION_GET_ACCOUNTS)
-    private void chooseAccount() {
-        if (EasyPermissions.hasPermissions(
-                this, Manifest.permission.GET_ACCOUNTS)) {
-            String accountName = getPreferences(Context.MODE_PRIVATE)
-                    .getString(PREF_ACCOUNT_NAME, null);
-            if (accountName != null) {
-                mCredential.setSelectedAccountName(accountName);
-                getResultsFromApi();
-            } else {
-                // Start a dialog from which the user can choose an account
-                startActivityForResult(
-                        mCredential.newChooseAccountIntent(),
-                        REQUEST_ACCOUNT_PICKER);
+    public void setWater(final String newVal){
+        final Handler myHandler = new Handler(Looper.getMainLooper());
+        final Runnable myRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d("Water newVal", newVal);
+                if (Objects.equals(newVal, "1")){
+                    waterButton.setChecked(true);
+                    Water = "1";
+                }
+                else if (Objects.equals(newVal, "0")){
+                    waterButton.setChecked(false);
+                    Water = "0";
+                }
             }
-        } else {
-            // Request the GET_ACCOUNTS permission via a user dialog
-            EasyPermissions.requestPermissions(
-                    this,
-                    "This app needs to access your Google account (via Contacts).",
-                    REQUEST_PERMISSION_GET_ACCOUNTS,
-                    Manifest.permission.GET_ACCOUNTS);
-        }
+        };
+        myHandler.post(myRunnable);
     }
 
-    /**
-     * Called when an activity launched here (specifically, AccountPicker
-     * and authorization) exits, giving you the requestCode you started it with,
-     * the resultCode it returned, and any additional data from it.
-     * @param requestCode code indicating which activity result is incoming.
-     * @param resultCode code indicating the result of the incoming
-     *     activity result.
-     * @param data Intent (containing result data) returned by incoming
-     *     activity result.
-     */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch(requestCode) {
-            case REQUEST_GOOGLE_PLAY_SERVICES:
-                if (resultCode != RESULT_OK) {
-                    Toast.makeText(this, "This app requires Google Play Services. " +
-                            "Please install Google Play Services on your device and relaunch this app.", Toast.LENGTH_LONG).show();
-                } else {
-                    getResultsFromApi();
+    public void setLamp(final String newVal){
+        final Handler myHandler = new Handler(Looper.getMainLooper());
+        Runnable myRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d("Lamp newVal", newVal);
+
+                if (Objects.equals(newVal, "1")){
+                    lampButton.setChecked(true);
+                    Lamp = "1";
                 }
-                break;
-            case REQUEST_ACCOUNT_PICKER:
-                if (resultCode == RESULT_OK && data != null &&
-                        data.getExtras() != null) {
-                    String accountName =
-                            data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-                    if (accountName != null) {
-                        SharedPreferences settings =
-                                getPreferences(Context.MODE_PRIVATE);
-                        SharedPreferences.Editor editor = settings.edit();
-                        editor.putString(PREF_ACCOUNT_NAME, accountName);
-                        editor.apply();
-                        mCredential.setSelectedAccountName(accountName);
-                        getResultsFromApi();
-                    }
+                else if (Objects.equals(newVal, "0")){
+                    lampButton.setChecked(false);
+                    Lamp = "0";
                 }
-                break;
-            case REQUEST_AUTHORIZATION:
-                if (resultCode == RESULT_OK) {
-                    getResultsFromApi();
-                }
-                break;
-        }
+            }
+        };
+        myHandler.post(myRunnable);
+
     }
 
-    /**
-     * Respond to requests for permissions at runtime for API 23 and above.
-     * @param requestCode The request code passed in
-     *     requestPermissions(android.app.Activity, String, int, String[])
-     * @param permissions The requested permissions. Never null.
-     * @param grantResults The grant results for the corresponding permissions
-     *     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        EasyPermissions.onRequestPermissionsResult(
-                requestCode, permissions, grantResults, this);
+    public void setTimer(final String newVal){
+        final Handler myHandler = new Handler(Looper.getMainLooper());
+        Runnable myRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d("Timer newVal", newVal);
+                Timer = newVal;
+            }
+        };
+        myHandler.post(myRunnable);
     }
 
-    /**
-     * Callback for when a permission is granted using the EasyPermissions
-     * library.
-     * @param requestCode The request code associated with the requested
-     *         permission
-     * @param list The requested permission list. Never null.
-     */
-    @Override
-    public void onPermissionsGranted(int requestCode, List<String> list) {
-        // Do nothing.
-    }
-
-    /**
-     * Callback for when a permission is denied using the EasyPermissions
-     * library.
-     * @param requestCode The request code associated with the requested
-     *         permission
-     * @param list The requested permission list. Never null.
-     */
-    @Override
-    public void onPermissionsDenied(int requestCode, List<String> list) {
-        // Do nothing.
-    }
-
-    /**
-     * Checks whether the device currently has a network connection.
-     * @return true if the device has a network connection, false otherwise.
-     */
-    private boolean isDeviceOnline() {
-        ConnectivityManager connMgr =
-                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        assert connMgr != null;
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        return (networkInfo != null && networkInfo.isConnected());
-    }
-
-    /**
-     * Check that Google Play services APK is installed and up to date.
-     * @return true if Google Play Services is available and up to
-     *     date on this device; false otherwise.
-     */
-    private boolean isGooglePlayServicesAvailable() {
-        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
-        return connectionStatusCode == ConnectionResult.SUCCESS;
-    }
-
-    /**
-     * Attempt to resolve a missing, out-of-date, invalid or disabled Google
-     * Play Services installation via a user dialog, if possible.
-     */
-    private void acquireGooglePlayServices() {
-        GoogleApiAvailability apiAvailability =
-                GoogleApiAvailability.getInstance();
-        final int connectionStatusCode =
-                apiAvailability.isGooglePlayServicesAvailable(this);
-        if (apiAvailability.isUserResolvableError(connectionStatusCode)) {
-            showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
-        }
-    }
-
-
-    /**
-     * Display an error dialog showing that Google Play Services is missing
-     * or out of date.
-     * @param connectionStatusCode code describing the presence (or lack of)
-     *     Google Play Services on this device.
-     */
-    void showGooglePlayServicesAvailabilityErrorDialog(
-            final int connectionStatusCode) {
-        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-        Dialog dialog = apiAvailability.getErrorDialog(
-                MainActivity.this,
-                connectionStatusCode,
-                REQUEST_GOOGLE_PLAY_SERVICES);
-        dialog.show();
-    }
-
-    /**
-     * An asynchronous task that handles the Google Sheets API call.
-     * Placing the API calls in their own task ensures the UI stays responsive.
-     */
-    private class MakeRequestTask extends AsyncTask<Void, Void, List<String>> {
-        private com.google.api.services.sheets.v4.Sheets mService = null;
-        private Exception mLastError = null;
-
-        MakeRequestTask(GoogleAccountCredential credential) {
-            HttpTransport transport = AndroidHttp.newCompatibleTransport();
-            JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
-            mService = new com.google.api.services.sheets.v4.Sheets.Builder(
-                    transport, jsonFactory, credential)
-                    .setApplicationName("Google Sheets API Android Quickstart")
-                    .build();
-        }
-
-        /**
-         * Background task to call Google Sheets API.
-         * @param params no parameters needed for this task.
-         */
+    private class upload extends AsyncTask<Object, Object, Void> {
         @Override
-        protected List<String> doInBackground(Void... params) {
+        protected Void doInBackground(Object... params) {
+            //Build URL with parameters
+            String ServerUrl = "https://script.google.com/macros/s/AKfycbwPE9mfnqfUhx8GCZrJ0J-AzaJAS2S08IFjy1R8NC93vvIXurk/exec";
+            if (!read){
+                //parameters when writing
+                ServerUrl += ("?pWater=" + Water);
+                ServerUrl += ("&pLamp=" + Lamp);
+                ServerUrl += ("&pTimer=" + Timer);
+            }
+
+            Log.d("ServerURL", ServerUrl);
+
+            HttpURLConnection urlConnection = null;
             try {
-                return getDataFromApi();
-            } catch (Exception e) {
-                mLastError = e;
-                cancel(true);
-                return null;
-            }
-        }
+                URL url = new URL(ServerUrl);
+                urlConnection = (HttpURLConnection) url.openConnection();
+                InputStream in = new BufferedInputStream(urlConnection.getInputStream());
 
-        /**
-         * Fetch a list of names and majors of students in a sample spreadsheet:
-         * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-         * @return List of names and majors
-         * @throws IOException could throw ioException
-         */
-        private List<String> getDataFromApi() throws IOException {
-            String spreadsheetId = "1H062SSqLF8JN7vaRyhBx_h7om0sxhKRB9g6aEHo5Pyw";
-            String range = "Data!B2:F";
-            List<String> results = new ArrayList<>();
-            ValueRange response = this.mService.spreadsheets().values()
-                    .get(spreadsheetId, range)
-                    .execute();
-            List<List<Object>> values = response.getValues();
-            if (values != null) {
-                for (List row : values) {
-                    final Handler myHandler = new Handler(Looper.getMainLooper());
+                String html = readStream(in);
 
-                    Runnable myRunnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            if (auto){
-                                waterButton.setEnabled(false);
-                                lampButton.setEnabled(false);
-                            }
-                            else {
-                                waterButton.setEnabled(true);
-                                lampButton.setEnabled(true);
-                            }
+                int indexOfStart = html.indexOf("!START!");
+                int indexOfEnd = html.indexOf("!END!");
 
-                            autoButton.setChecked(auto);
-                            autoButton.setEnabled(true);
-                            lampButton.setChecked(actualLamp);
-                            waterButton.setChecked(actualWater);
-                        }
-                    };
-
-                    actualWater = row.get(2).toString().equals("1"); //if row = 1, actualWater = true
-                    actualLamp = row.get(3).toString().equals("1"); //if row = 1, actualLamp = true
-                    auto = row.get(4).toString().equals("1");       //if row = 1, auto = true
-
-                    myHandler.post(myRunnable);
+                if (read) {
+                    setWater(html.substring(indexOfStart + 9, indexOfStart + 10));
+                    setLamp(html.substring(indexOfStart + 13, indexOfStart + 14));
+                    setTimer(html.substring(indexOfStart + 17, indexOfEnd));
+                    read = false;
                 }
             }
-            return results;
-        }
-
-
-
-        @Override
-        protected void onPreExecute() {
-            //mOutputText.setText("");
-           // mProgress.show();
-        }
-
-        @Override
-        protected void onPostExecute(List<String> output) {
-            //mProgress.hide();
-            if (output == null || output.size() == 0) {
-                Log.d("debug", "No results returned.");
+            catch (IOException e) {
+                e.printStackTrace();
             }
+            finally {
+                assert urlConnection != null;
+                urlConnection.disconnect();
+            }
+            return null;
         }
 
-        @Override
-        protected void onCancelled() {
-            //mProgress.hide();
-            if (mLastError != null) {
-                if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
-                    showGooglePlayServicesAvailabilityErrorDialog(
-                            ((GooglePlayServicesAvailabilityIOException) mLastError)
-                                    .getConnectionStatusCode());
-                } else if (mLastError instanceof UserRecoverableAuthIOException) {
-                    startActivityForResult(
-                            ((UserRecoverableAuthIOException) mLastError).getIntent(),
-                            MainActivity.REQUEST_AUTHORIZATION);
-                } else {
-                    Log.d("error", "The following error occurred:\n" + mLastError.getMessage());
+        private String readStream(InputStream is) {
+            try {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                int i = is.read();
+                while (i != -1) {
+                    bo.write(i);
+                    i = is.read();
                 }
-            } else {
-                Log.d("debug", "Request cancelled.");
+                return bo.toString();
+            } catch (IOException e) {
+                return "";
             }
         }
     }

@@ -9,4 +9,5 @@
     <string name="off">Off</string>
     <string name="closed">closed</string>
     <string name="open">open</string>
+    <string name="Timer">Water the plant every x hours (0 for off)</string>
 </resources>
